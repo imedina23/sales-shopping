@@ -21,12 +21,14 @@ namespace shopping.Controllers
         }
 
         // GET: Countries
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             return View(await _context.countries.ToListAsync());
         }
 
         // GET: Countries/Details/5
+        [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -34,7 +36,7 @@ namespace shopping.Controllers
                 return NotFound();
             }
 
-            var country = await _context.countries
+            Country country = await _context.countries
                 .FirstOrDefaultAsync(m => m.id == id);
             if (country == null)
             {
@@ -45,6 +47,7 @@ namespace shopping.Controllers
         }
 
         // GET: Countries/Create
+        [HttpGet]
         public IActionResult Create()
         {
             return View();
@@ -55,18 +58,38 @@ namespace shopping.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("id,Name,MyProperty")] Country country)
+        public async Task<IActionResult> Create(Country country)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(country);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _context.Add(country);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "There is already a country with the same name.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
             }
+
             return View(country);
         }
 
         // GET: Countries/Edit/5
+        [HttpGet]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -74,7 +97,7 @@ namespace shopping.Controllers
                 return NotFound();
             }
 
-            var country = await _context.countries.FindAsync(id);
+            Country country = await _context.countries.FindAsync(id);
             if (country == null)
             {
                 return NotFound();
@@ -87,7 +110,7 @@ namespace shopping.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("id,Name,MyProperty")] Country country)
+        public async Task<IActionResult> Edit(int id, Country country)
         {
             if (id != country.id)
             {
@@ -100,19 +123,24 @@ namespace shopping.Controllers
                 {
                     _context.Update(country);
                     await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateException dbUpdateException)
                 {
-                    if (!CountryExists(country.id))
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
                     {
-                        return NotFound();
+                        ModelState.AddModelError(string.Empty, "There is already a country with the same name.");
                     }
                     else
                     {
-                        throw;
+                        ModelState.AddModelError(string.Empty, dbUpdateException.InnerException.Message);
                     }
                 }
-                return RedirectToAction(nameof(Index));
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
+
             }
             return View(country);
         }
@@ -125,8 +153,8 @@ namespace shopping.Controllers
                 return NotFound();
             }
 
-            var country = await _context.countries
-                .FirstOrDefaultAsync(m => m.id == id);
+           Country country = await _context.countries
+                .FindAsync(id);
             if (country == null)
             {
                 return NotFound();
@@ -146,9 +174,6 @@ namespace shopping.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private bool CountryExists(int id)
-        {
-            return _context.countries.Any(e => e.id == id);
-        }
+       
     }
 }
